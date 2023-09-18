@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+        "three": "https://unpkg.com/three@v0.154.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@v0.154.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <style>
+
+        .header_item, .cartcopy_elem {
+            filter: brightness(6);
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 30;
+            color: #fff;
+            font-size: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Gilroy, Helvetica, sans-serif;
+        }
+        
+        .container {
+            width: 100%; 
+            height: 100vh;
+            max-height: -webkit-fill-available;
+            position: relative;
+            z-index: 1;
+            margin-top: -100px; 
+            margin-bottom: 100px;
+            overflow: hidden;
+            background: #292929;
+        }
+        
+        .container-canvas {
+            height: 100%;
+            max-height: -webkit-fill-available; 
+        }
+
+        .container .container-content {
+            position: absolute;
+            z-index: 2;
+            left: 0;
+            right: 0;
+            bottom: 0px;
+            padding: 20px 20px 120px 20px;
+            margin: auto;
+            max-width: 1160px;
+        }
+
+        .container-content h1, p, a {
+            font-family: Gilroy, Helvetica, sans-serif;
+            color: #fff;
+            font-weight: 600;
+            line-height: 100%;
+            max-width: 475px;
+        }
+
+        .container-content h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .container-content a {
+            font-size: 18px;
+            text-decoration: none;
+            padding: 18px 36px;
+            border: 2px solid #fff;
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            color: #fff !important;
+            transition: all 0.3s ease;
+        }
+        
+        .container-content a:hover {
+            color: #333 !important;
+            background: #fff;
+        }
+
+        .container-content p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+        
+        @media screen and (max-width: 475px) {
+            .container {
+                width: 100%; 
+                height: 100svh !important;
+                max-height: -webkit-fill-available;
+                position: relative;
+                z-index: 1;
+                margin-top: -100px; 
+                margin-bottom: 40px;
+                overflow: hidden;
+            }
+            
+            .container-content {
+                position: absolute;
+                z-index: 2;
+                left: 0;
+                right: 0;
+                bottom: 0px;
+                padding: 20px 20px 40px 20px !important;
+                margin: auto;
+                max-width: 1160px;
+            }
+            
+            .container-content p {
+                font-size: 16px;
+            }
+            
+            .container-content h1 {
+                font-size: 32px;
+                margin-bottom: 20px;
+            }
+        }
+
+        /*
+        .container-canvas {
+            -webkit-transition: -webkit-filter 2s ease-out;
+            transition: -webkit-filter 2s ease-out;
+            -o-transition: filter 2s ease-out;
+            transition: filter 2s ease-out;
+            transition: filter 2s ease-out, -webkit-filter 2s ease-out;
+            -webkit-transform: scale(1.15);
+                -ms-transform: scale(1.15);
+                    transform: scale(1.15);
+            -webkit-filter: blur(10px);
+                    filter: blur(10px);
+        }
+
+        .canvas-animate {
+            -webkit-transform: scale(1.15);
+                -ms-transform: scale(1.15);
+                    transform: scale(1.15);
+            -webkit-filter: blur(0px) !important;
+                    filter: blur(0px) !important;
+        }*/
+    </style>
+    <div class="container">
+        <div class="progress-bar"><img src="https://static.tildacdn.com/tild3032-6637-4135-a564-353335613561/loading-gif.gif" width="60px" height="60px"></div>
+        <div class="container-content">
+            <h1>PACE RING<br>FOR GANG & FAMILY</h1>
+            <a href="https://pacemoscow.com/tproduct/1-632048226471-pace-ring">Купить</a>
+        </div>
+        <div class="container-canvas"></div>
+    </div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
+
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    		import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    		import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        let container = document.querySelector('.container-canvas');
+        let scene, camera, renderer, grid, material, ambient, light, light2, floorMat, floorGeometry, floorMesh, loader, controls;
+        
+        const model = new THREE.Object3D( );
+        const model2 = new THREE.Object3D( );
+
+        let composer, outputPass, bloomPass, renderScene;
+
+        function init() {
+
+            //Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color( 0x333333 );
+            scene.fog = new THREE.Fog( 0xe0e0e0, 10, 30 );
+
+            //Camera
+            camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 0.25, 100);
+            camera.position.x = 2;
+            camera.position.y = -2;
+            camera.position.z = 4;
+            camera.lookAt( 0, 0, 0 );
+
+            //Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize( window.innerWidth, window.innerHeight );
+            renderer.setPixelRatio( window.devicePixelRatio );
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      			renderer.toneMappingExposure = 1;
+      			renderer.useLegacyLights = false;
+            container.appendChild( renderer.domElement );
+
+            //Controls
+            controls = new OrbitControls( camera, renderer.domElement );
+            controls.update();
+            controls.enableDamping = true;
+            controls.minDistance = 4;
+            controls.maxDistance = 5;
+            controls.maxPolarAngle = Math.PI / 2;
+            controls.minPolarAngle = Math.PI / 4;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.7;
+            controls.enableZoom = false;
+
+            //Material
+
+
+            //Light
+            ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add( ambient );
+            light = new THREE.PointLight(0xc4c4c4, 1);
+            light.position.set(0, 300, 500);
+            scene.add( light );
+            light2 = new THREE.PointLight(0xc4c4c4, 1);
+            light2.position.set(500, 300, 500);
+            scene.add( light2 );
+
+            //Composer
+            renderScene = new RenderPass( scene, camera );
+
+      			bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+      			bloomPass.threshold = 0;
+      			bloomPass.strength = 0.3;
+      			bloomPass.radius = 0;
+      
+      			composer = new EffectComposer( renderer );
+                  composer.setSize( window.innerWidth, window.innerHeight );
+                  composer.setPixelRatio( window.devicePixelRatio );
+      			composer.addPass( renderScene );
+      			composer.addPass( bloomPass );
+
+            //Resize
+            window.addEventListener('resize', onWindowResize, false)
+            function onWindowResize() {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                composer.setSize( container.clientWidth, container.clientHeight );
+            }
+
+            //GLTFLoader
+            new EXRLoader()
+  					.setPath( 'https://raw.githubusercontent.com/nazeru/pace/main/' )
+  					.load( 'hdri3.exr', function ( texture ) {
+  
+  						texture.mapping = THREE.EquirectangularReflectionMapping;
+  
+  						//scene.background = texture;
+                          scene.backgroundBlurriness = 1;
+  						scene.environment = texture;
+
+						render();
+
+						// model
+
+						const loader = new GLTFLoader().setPath( 'https://raw.githubusercontent.com/nazeru/pace/main/' );
+                        loader.load( 'ring%20low7.glb', function ( gltf ) {
+                            model.add(gltf.scene);
+                            //model2.add(gltf.scene.clone());
+
+                            model.rotation.setFromVector3(new THREE.Vector3(0, -Math.PI / 9, 0));
+							scene.add( model );
+                            //scene.add( model2 );
+							render();
+
+						},
+                    	// called while loading is progressing
+                    	function ( xhr ) {
+                    
+                            let progressBar = document.querySelector('.progress-bar');
+                    		console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+                            if (( xhr.loaded / xhr.total * 100 ) == 100) {
+                                progressBar.style.display = 'none';
+                            } 
+
+                    	},
+                    	// called when loading has errors
+                    	function ( error ) {
+                    
+                    		console.log( 'An error happened' );
+                    
+                    	} );
+
+					} );
+            model.scale.set(0.15, 0.15, 0.15);        
+
+        }
+
+        function easeInOutCubic( x ) {
+
+            return x * 2 * 3 - x * 3 * 2;
+
+        }
+
+        function animate() {
+            requestAnimationFrame( animate );
+
+            controls.update();
+            let size = model.scale.x;
+            if (size < 0.25) {
+                size = size * 1.004; 
+                model.scale.set(size, size, size);
+            } 
+            //model.rotation.y += 0.002;
+
+            //model2.rotation.x -= 0.002;
+            //model2.rotation.z -= 0.002;
+
+            composer.render();
+        }
+
+        init();
+        animate();
+
+        function render() {
+
+            renderer.render( scene, camera );
+
+        }
+
+        function blur() {
+            let blurContainer = document.querySelector('.container-canvas');
+            blurContainer.classList.toggle("canvas-animate");
+        }
+
+        document.addEventListener("DOMContentLoaded", blur);
+
+    </script>
+</body>
+</html>
